@@ -1,0 +1,340 @@
+<html>
+  <head>
+    <title>Coverflower</title>
+    <style>
+      html {
+        width: 100%;
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        font: 12pt Helvetica, Verdana;
+        overflow: hidden;
+      }
+
+      #edit-menu {
+        z-index: 1000;
+      }
+
+      #edit-menu a:hover {
+        cursor: pointer;
+      }
+
+      #edit-menu ul {
+        margin: 10px;
+        font-size: 80%;
+        padding-left: 15px;
+      }
+
+      a {
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      #dialog-add fieldset {
+        padding: 1em;
+      }
+
+      #dialog-add label {
+        float: left;
+        width: 30%;
+        margin-right:0.5em;
+        padding-top:0.2em;
+        text-align:right;
+      }
+
+      #dialog-add textarea {
+        height: 300px;
+      }
+
+
+      #containers {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0px;
+        left: 0px;
+      }
+
+      .container {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        border: 2px solid #000;
+        border-radius: 10px;
+        width: 300px;
+        height: 300px;
+      }
+
+      #videos {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        width: 100%;
+        height: 100%;
+      }
+
+    </style>
+    <link rel="stylesheet" href="css/jquery-ui.css" text="text/css" />
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/jquery.transform.js"></script>
+    <script type="text/javascript" src="http://popcornjs.org/code/dist/popcorn-complete.js"></script>
+    <!--<script type="text/javascript" src="popcorn-complete.js"></script>-->
+    <script type="text/javascript">
+
+      $(document).ready( function (e) {
+
+        Popcorn.plugin('test', function (options) {
+          return {
+            _setup: function (options) {
+            },
+            start: function (event, options) {
+              $('#test-container').html('Test!');
+            },
+            end: function (event, options) {
+              $('#test-container').html('');
+            }
+          };
+        });
+
+        Popcorn.plugin('animator', function (options) {
+          return {
+            _setup: function (options) {
+            },
+            start: function (event, options) {
+            },
+            end: function (event, options) {
+            }
+          };
+        });
+
+        var videos = [],
+            $win = $(window),
+            edit = window.location.href.indexOf('?edit');
+
+        $('#edit-menu-link-add').click( function(e) {
+          $('#dialog-add').dialog('open');
+        });
+
+        (function() {
+          var fields = $([]).add($('#dialog-add-video-url')).add($('#dialog-add-popcorn'));
+          $('#dialog-add').dialog({
+
+            autoOpen: false,
+            height: 550,
+            width: 500,
+            modal: true,
+
+            buttons: {
+
+              "Insert" : function () {
+
+                var okFields = 0;
+                fields.each( function (i, e) {
+
+                  if ( e.value ) {
+                    $(e).removeClass('ui-state-error');
+                    ++okFields;
+                  }
+                  else {
+                    $(e).addClass('ui-state-error');
+                  } //if
+                
+                }); //each
+
+                if ( okFields === fields.length ) {              
+
+                  var video = document.createElement('video'),
+                      videoSource = document.createElement('source'),
+                      popcornSrc = $('#dialog-add-popcorn').val();
+
+                  var targets = popcornSrc.match(/[a-z]*-container/gi);
+                  for (var i=0; i<targets.length; ++i) {
+                    var target = targets[i];
+                    var title = $('<h3 />');
+                    title.html(target.substr(0, target.indexOf('-container')));
+                    title.addClass('ui-widget-header');
+                    var div = $('<div/>');
+                    var rx = -50 + Math.random() * 100;
+                    var ry = -50 + Math.random() * 100;
+                    div.attr('id', target + '-ui')
+                      .addClass('container')
+                      .addClass('ui-widget-content')
+                      .appendTo('#containers')
+                      .draggable()
+                      .css('z-index', 30)
+                      .resizable()
+                      .offset({left:window.innerWidth - div.width() - 20 + rx, top: 100 + ry});
+                    div.append(title);
+                    var content = $('<div/>');
+                    content.attr('id', target);
+                    div.append(content);
+                  } //for
+
+                  var popcornFunc = new Function(popcornSrc);
+
+                  videoSource.src = $('#dialog-add-video-url').val();
+                  video.appendChild(videoSource); 
+                  video.id = 'video';
+                  video.setAttribute('controls', true);
+                  video.setAttribute('autobuffer', true);
+                  video.setAttribute('preload', 'auto');
+                  video.style.zIndex = 20;
+
+                  $('#videos').append(video);
+
+                  try {
+
+                    popcornFunc();
+                    video.id = 'video' + videos.length;
+                    videos.push(video);
+                    $(this).dialog('close');
+
+                    var popcorn = Popcorn.instances[Popcorn.instances.length-1];
+
+                    var transitionIn = $('#dialog-add-transition-in').val();
+                    var transitionOut = $('#dialog-add-transition-out').val();
+                    $(video).bind('loadedmetadata', function (ev) {
+                      switch(transitionIn) {
+                        case 'slide':
+                          $(video).offset({ left:window.innerWidth/2 - video.videoWidth/2, 
+                                            top:-video.videoHeight});
+                          $(video).transform({rotate: '-30deg'});
+                          $(video).animate({
+                            rotate: '0deg',
+                            top: window.innerHeight/2 - video.videoHeight/2 
+                          }, 1000, function() {
+                            
+                          });
+                          break;
+                        default:
+                          $(video).offset({ left:window.innerWidth/2 - video.videoWidth/2, 
+                                            top:window.innerHeight/2 - video.videoHeight/2});
+                          break;
+                      }
+                      popcorn.play();
+                    });
+
+                    popcorn.listen('ended', function (e) {
+                      switch(transitionOut) {
+                        case 'slide':
+                          $(video).animate({
+                            rotate: '30deg',
+                            top: window.innerHeight + video.videoHeight 
+                          }, 1000, function() {
+                            $(video).hide();
+                          });
+                          break;
+                        default:
+                          break;
+                      }
+                    });
+  
+                  }
+                  catch (error) {
+
+                    $('#dialog-add-popcorn').addClass('ui-state-error');
+                    $('#dialog-add-error').html(error.toString());
+                    $('#dialog-add-error').addClass('ui-state-highlight');
+                    $(video).remove();
+
+                  } //catch
+
+                } //if
+  
+              },
+  
+              Cancel : function () {
+                $(this).dialog('close');
+              },
+
+            },
+
+            close : function () {
+              fields.val('');
+              fields.removeClass('ui-state-error');
+              $('#dialog-add-error').removeClass('ui-state-highlight');
+              $('#dialog-add-error').html('');
+            },
+
+          });
+        })();
+
+        $('#edit-menu').dialog({
+          position: [0, 0],
+          width: 200,
+          modal: false,
+          autoOpen: false,
+          closeOnEscape: false,
+          beforeClose: function() {
+            return false;
+          },
+        });
+
+        if (true || edit > -1) {
+          $('#edit-menu').dialog('open');
+        } //if
+
+        $win.bind("beforeunload", function( event ) {
+          return "Are you sure you want to leave?";
+        });
+
+        $win.keypress( function( event ) {
+          var elem = event.srcElement || event.target;
+          if ( (event.which === 46 || event.which === 8) &&
+               (elem.nodeName !== "INPUT" && elem.nodeName !== "TEXTAREA") ) {
+            event.preventDefault();
+          }
+        });
+
+      });
+
+    </script>
+  </head>
+  <body>
+    <div id="videos">
+    </div>
+    <div id="containers">
+    </div>
+    <div id="edit-menu" title="Menu">
+      <ul id="edit-menu-list">
+        <li><a id="edit-menu-link-add">Add Video</a></li>
+      </ul>
+    </div>
+    <div id="dialog-add" title="Add Video">
+      <form>
+        <div id="dialog-add-error"></div>
+        <fieldset>
+          <label for="video-url">Video URL:</label>
+          <input type="text" name="video-url" id="dialog-add-video-url" class="text ui-widget-content ui-corner-all" value="http://videos-cdn.mozilla.net/serv/webmademovies/Moz_Doc_0329_GetInvolved_ST.webm"/>
+          <br />
+          <label for="transtion-in">Transition IN:</label>
+          <select type="text" name="transition-in" id="dialog-add-transition-in" class="text ui-widget-content ui-corner-all" />
+            <option id="transition-in-slide" value="none">None</option>
+            <option id="transition-in-slide" value="slide">Slide</option>
+          </select>
+          <br />
+          <label for="transtion-out">Transition OUT:</label>
+          <select type="text" name="transition-out" id="dialog-add-transition-out" class="text ui-widget-content ui-corner-all" />
+            <option id="transition-out-slide" value="none">None</option>
+            <option id="transition-out-slide" value="slide">Slide</option>
+          </select>
+          <br />
+          <label for="popcorn">Popcorn:</label>
+          <textarea type="text" name="popcorn" id="dialog-add-popcorn" value="" class="text ui-widget-content ui-corner-all">
+            var $p = Popcorn("#video").flickr({start:0, end:10, tags: 'firefox', target:'flickr-container'});
+            $p.test({"id":"start","start":0,"end":2,"target":"test-container"});
+          </textarea>
+        </fieldset>
+      </form> 
+    </div>
+  </body>
+</html>
