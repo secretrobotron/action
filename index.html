@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Coverflower</title>
+    <title>Action</title>
     <style>
       html {
         width: 100%;
@@ -16,18 +16,31 @@
         overflow: hidden;
       }
 
+      .bold {
+        font-weight: bold;
+      }
+
       #edit-menu {
+        overflow: hidden;
         z-index: 1000;
       }
 
-      #edit-menu a:hover {
+      #edit-menu:hover {
         cursor: pointer;
+      }
+
+      #edit-menu a:hover {
+        text-decoration: underline;
       }
 
       #edit-menu ul {
         margin: 10px;
         font-size: 80%;
         padding-left: 15px;
+      }
+
+      #edit-menu h3 {
+        font-size: 80%;
       }
 
       a {
@@ -50,10 +63,21 @@
         text-align:right;
       }
 
-      #dialog-add textarea {
-        height: 300px;
+      #dialog-add input, select {
+        width: 60%;
+        font-weight: normal;
       }
 
+      #dialog-add textarea {
+        height: 200px;
+        width: 60%;
+        font-size: 10pt;
+        font-weight: normal;
+      }
+
+      #dialog-add .ui-widget-content {
+        background: #fff;
+      }
 
       #containers {
         width: 100%;
@@ -81,6 +105,22 @@
         height: 100%;
       }
 
+      #dialog-add form, fieldset {
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+
+      #spinner-div {
+        overflow: hidden;
+        width: 300px;
+        text-align: center;
+      }
+
+      #spinner-canvas {
+        margin: auto;
+      }
+
     </style>
     <link rel="stylesheet" href="css/jquery-ui.css" text="text/css" />
     <script type="text/javascript" src="js/jquery.js"></script>
@@ -92,15 +132,88 @@
 
       $(document).ready( function (e) {
 
+        var sections = [],
+            currentSection,
+            currentSectionIndex,
+            targetUUID = 0,
+            $win = $(window),
+            edit = window.location.href.indexOf('?edit');
+
+        (function() {
+          var spinnerCanvas = document.getElementById('spinner-canvas'),
+              ctx = spinnerCanvas.getContext('2d'),
+              numPieces = 8,
+              indexStep = 4,
+              spinnerInterval,
+              w = spinnerCanvas.width/2;
+              spinnerIndex = 0;
+
+          ctx.clearRect(0, 0, spinnerCanvas.width, spinnerCanvas.height);
+          ctx.translate(spinnerCanvas.width/2, spinnerCanvas.height/2);
+          ctx.fillStyle = '#aaa';
+          for (var i=0; i<numPieces; ++i) {
+            ctx.save();
+            ctx.rotate(Math.PI*2/numPieces*i);
+            ctx.translate(w/4, w/4);
+            ctx.beginPath();
+            ctx.arc(0, 0, w/8, w/8, 0, Math.PI*2, true);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+          } //for
+
+          $('#spinner-div').dialog({
+            width: 300,
+            autoOpen: false,
+            closeOnEscape: false,
+            draggable: false,
+            resizable: false,
+            modal: true,
+            stack: true,
+            open: function (e, ui) {
+              $('.ui-dialog-titlebar-close').hide();
+              spinnerInterval = setInterval( function() {
+                spinnerIndex += indexStep;
+                $('#spinner-canvas').css('rotate', spinnerIndex+'deg');
+              }, 30);
+            },
+            close: function (e) {
+              clearInterval(spinnerInterval);
+            },
+          });
+        })();
+
+        $('#edit-menu-videos').sortable({
+          placeholder: "ui-state-highlight"
+        });
+
+        $('#edit-menu').disableSelection();
+        $('#edit-menu-videos').disableSelection();
+
+        $('#edit-menu-videos').bind('sortupdate', function ( event, ui ) {
+          newSections = [];
+          var vids = $(this).sortable('toArray');
+          for (var i=0; i<vids.length; ++i) {
+            var vidId = vids[i].substr(vids[i].indexOf('-')+1);
+            for (var j=0; j<sections.length; ++j) {
+              if (vidId === sections[j].video.id) {
+                newSections.push(sections[j]);
+                break;
+              } //if 
+            } //for
+          } //for
+          sections = newSections;
+        });
+
         Popcorn.plugin('test', function (options) {
           return {
             _setup: function (options) {
             },
             start: function (event, options) {
-              $('#test-container').html('Test!');
+              $('#'+options.target).html('Test!');
             },
             end: function (event, options) {
-              $('#test-container').html('');
+              $('#'+options.target).html('');
             }
           };
         });
@@ -116,21 +229,56 @@
           };
         });
 
-        var videos = [],
-            $win = $(window),
-            edit = window.location.href.indexOf('?edit');
-
         $('#edit-menu-link-add').click( function(e) {
+          $('#dialog-add-video-name').val('Untitled '+sections.length);
           $('#dialog-add').dialog('open');
         });
+
+        function playNextSection() {
+          var index = sections.indexOf(currentSection);
+          playSection(sections[index+1]);
+        }
+
+        function stopCurrentSection() {
+          if (currentSection) {
+            currentSection.popcorn.pause();
+            currentSection.hide();
+            currentSection.$li.removeClass('bold');
+          } //if
+        }; //stopCurrentSection
+
+        function playSection (section) {
+          if (section) {
+            function play() {
+              section.popcorn.currentTime(0);
+              section.show();
+              section.popcorn.play();
+              section.transitionIn();
+              section.$li.addClass('bold');
+            }; //play
+
+            currentSection = section;
+  
+            if (section.ready) {
+              play();
+            }
+            else {
+              $('#spinner-div').dialog('open');
+              $(section.video).bind('loadedmetadata', function (ev) {
+                $('#spinner-div').dialog('close');
+                play();
+              });
+            } //if
+          } //if
+        }; //playSection
 
         (function() {
           var fields = $([]).add($('#dialog-add-video-url')).add($('#dialog-add-popcorn'));
           $('#dialog-add').dialog({
 
             autoOpen: false,
-            height: 550,
-            width: 500,
+            height: 500,
+            width: 700,
             modal: true,
 
             buttons: {
@@ -153,31 +301,108 @@
                 if ( okFields === fields.length ) {              
 
                   var video = document.createElement('video'),
+                      $video,
                       videoSource = document.createElement('source'),
                       popcornSrc = $('#dialog-add-popcorn').val();
+ 
+                  var transitions = {
+                    slideIn: function (callback) {
+                      $video.show();
+                      $video.offset({ left:window.innerWidth/2 - video.videoWidth/2, 
+                                        top:-video.videoHeight});
+                      $video.transform({rotate: '-30deg'});
+                      $video.animate({
+                        rotate: '0deg',
+                        top: window.innerHeight/2 - video.videoHeight/2 
+                      }, 1000, callback);
 
-                  var targets = popcornSrc.match(/[a-z]*-container/gi);
-                  for (var i=0; i<targets.length; ++i) {
-                    var target = targets[i];
+                    },
+                    slideOut: function (callback) {
+                      $video.animate({
+                        rotate: '30deg',
+                        top: window.innerHeight + video.videoHeight 
+                      }, 1000, function() {
+                        $video.hide();
+                        if (callback) {
+                          callback();
+                        } //if
+                      });
+                    },
+                    fadeIn: function (callback) {
+                      $video.offset({ left:window.innerWidth/2 - video.videoWidth/2, 
+                                        top:window.innerHeight/2 - video.videoHeight/2});
+                      $video.css('opacity', 0);
+                      $video.show();
+                      $video.fadeTo(1000, 1);
+                     
+                    },
+                    fadeOut: function (callback) {
+                      $video.fadeTo(1000, 0);
+                      setTimeout(function() {
+                        $video.hide();
+                        if (callback) {
+                          callback();
+                        } //if
+                      }, 1000);
+                    },
+                    defaultIn: function (callback) {
+                      $video.show();
+                      $video.offset({ left:window.innerWidth/2 - video.videoWidth/2, 
+                                        top:window.innerHeight/2 - video.videoHeight/2});
+                      if (callback) { 
+                        callback();
+                      } //if
+                    },
+                    defaultOut: function (callback) {
+                      $video.hide();
+                      if (callback) { 
+                        callback();
+                      } //if
+                    },
+                  };
+
+
+                  
+                  var plugins = [];
+                  var popcornDivs = [];
+                  var pluginInstances = popcornSrc.match(/\.\w*\(\{([\s\w'"]*:\s?[\s"'\w]*,\s?)*["|']?target["|']?:["|'][a-z]*-container["|']/gi);
+                  var targetRegex = /[\s"']*target[\s"']*:\s?["|'](.*)["|']\s?/;
+                  var pluginRegex = /\.(\w*)\(\{/;
+                  for (var i=0; i<pluginInstances.length; ++i) {
+                    var instance = pluginInstances[i];
+                    var targetName = instance.match(targetRegex)[1];
+                    var pluginName = instance.match(pluginRegex)[1];
+                    if (plugins[pluginName]) {
+                      continue;
+                    } //if
+                    plugins[pluginName] = true;
+                    var newTarget = 'popcorn-target-' + pluginName + '-' + targetUUID;
+                    var re = new RegExp(targetName, "gi");
+                    popcornSrc = popcornSrc.replace(re, newTarget);
                     var title = $('<h3 />');
-                    title.html(target.substr(0, target.indexOf('-container')));
+                    title.html(pluginName);
                     title.addClass('ui-widget-header');
-                    var div = $('<div/>');
+                    var $div = $('<div/>');
                     var rx = -50 + Math.random() * 100;
                     var ry = -50 + Math.random() * 100;
-                    div.attr('id', target + '-ui')
-                      .addClass('container')
+                    $div.attr('id', newTarget + '-ui')
                       .addClass('ui-widget-content')
-                      .appendTo('#containers')
+                      .addClass('container')
                       .draggable()
                       .css('z-index', 30)
                       .resizable()
-                      .offset({left:window.innerWidth - div.width() - 20 + rx, top: 100 + ry});
-                    div.append(title);
+                      .css('position', 'absolute')
+                      .offset({left:window.innerWidth - $div.width() - 20 + rx, top: 100 + ry});
+                    $div.append(title);
                     var content = $('<div/>');
-                    content.attr('id', target);
-                    div.append(content);
+                    content.attr('id', newTarget);
+                    $div.append(content);
+                    popcornDivs.push($div);
+                    $('#containers').append($div);
+                    ++targetUUID;
                   } //for
+
+                  console.log(popcornSrc);
 
                   var popcornFunc = new Function(popcornSrc);
 
@@ -190,56 +415,84 @@
                   video.style.zIndex = 20;
 
                   $('#videos').append(video);
+                  $video = $(video);
 
                   try {
 
+                    //Should bail right here if popcorn is bad
                     popcornFunc();
-                    video.id = 'video' + videos.length;
-                    videos.push(video);
+
+
+                    video.id = 'video' + sections.length;
                     $(this).dialog('close');
 
                     var popcorn = Popcorn.instances[Popcorn.instances.length-1];
 
                     var transitionIn = $('#dialog-add-transition-in').val();
                     var transitionOut = $('#dialog-add-transition-out').val();
+
+                    var name = $('#dialog-add-video-name').val();
+                    var $li = $('<li id="list-'+video.id+'"></li>');
+                    var $a = $('<a id="a-'+video.id+'">'+ name +'</a>');
+
+                    $a.appendTo($li);
+
+                   $('#edit-menu-videos').append($li);
+
+                    if (currentSection) {
+                      stopCurrentSection();
+                      currentSection.$li.removeClass('bold');
+                    } //if
+
+                    $li.addClass('bold');
+
+                    var section = {
+                      video: video,
+                      transitionIn: transitions[transitionIn],
+                      transitionOut: transitions[transitionOut],
+                      popcorn: popcorn,
+                      name: name,
+                      popcornDivs: popcornDivs,
+                      $li: $li,
+                      ready: false, 
+                      show: function () {
+                        for (var i=0; i<popcornDivs.length; ++i) {
+                          $(popcornDivs[i]).show();
+                        } //for
+                      },
+                      hide: function () {
+                        $video.hide();
+                        for (var i=0; i<popcornDivs.length; ++i) {
+                          $(popcornDivs[i]).hide();
+                        } //for
+                      },
+                    };
+
+                    currentSection = section;
+                    sections.push(section);
+
+                    $a.click( function (e) {
+                      stopCurrentSection();
+                      playSection(section);
+                    });
+ 
                     $(video).bind('loadedmetadata', function (ev) {
-                      switch(transitionIn) {
-                        case 'slide':
-                          $(video).offset({ left:window.innerWidth/2 - video.videoWidth/2, 
-                                            top:-video.videoHeight});
-                          $(video).transform({rotate: '-30deg'});
-                          $(video).animate({
-                            rotate: '0deg',
-                            top: window.innerHeight/2 - video.videoHeight/2 
-                          }, 1000, function() {
-                            
-                          });
-                          break;
-                        default:
-                          $(video).offset({ left:window.innerWidth/2 - video.videoWidth/2, 
-                                            top:window.innerHeight/2 - video.videoHeight/2});
-                          break;
-                      }
-                      popcorn.play();
+                      section.ready = true;
                     });
 
-                    popcorn.listen('ended', function (e) {
-                      switch(transitionOut) {
-                        case 'slide':
-                          $(video).animate({
-                            rotate: '30deg',
-                            top: window.innerHeight + video.videoHeight 
-                          }, 1000, function() {
-                            $(video).hide();
-                          });
-                          break;
-                        default:
-                          break;
-                      }
+                    popcorn.listen('ended', function (ev) {
+                      section.transitionIn(playNextSection);
                     });
+
+                    section.hide();
+                    playSection(section);
   
                   }
                   catch (error) {
+
+                    for (var i=0; i<popcornDivs.length; ++i) {
+                      $(popcornDivs[i]).remove();
+                    } //for
 
                     $('#dialog-add-popcorn').addClass('ui-state-error');
                     $('#dialog-add-error').html(error.toString());
@@ -249,6 +502,7 @@
                   } //catch
 
                 } //if
+
   
               },
   
@@ -259,7 +513,7 @@
             },
 
             close : function () {
-              fields.val('');
+              //fields.val('');
               fields.removeClass('ui-state-error');
               $('#dialog-add-error').removeClass('ui-state-highlight');
               $('#dialog-add-error').html('');
@@ -272,10 +526,11 @@
           position: [0, 0],
           width: 200,
           modal: false,
+          stack: false,
           autoOpen: false,
           closeOnEscape: false,
-          beforeClose: function() {
-            return false;
+          open: function (e, ui) {
+            $(".ui-dialog-titlebar-close").hide();
           },
         });
 
@@ -305,36 +560,45 @@
     <div id="containers">
     </div>
     <div id="edit-menu" title="Menu">
+      <h3>Options</h3>
       <ul id="edit-menu-list">
         <li><a id="edit-menu-link-add">Add Video</a></li>
+      </ul>
+      <h3>Videos</h3>
+      <ul id="edit-menu-videos">
       </ul>
     </div>
     <div id="dialog-add" title="Add Video">
       <form>
         <div id="dialog-add-error"></div>
         <fieldset>
+          <label for="video-name">Name:</label>
+          <input type="text" name="video-name" id="dialog-add-video-name" class="text ui-widget-content ui-corner-all" value="Untitled" />
+          <br clear="all"/>
           <label for="video-url">Video URL:</label>
           <input type="text" name="video-url" id="dialog-add-video-url" class="text ui-widget-content ui-corner-all" value="http://videos-cdn.mozilla.net/serv/webmademovies/Moz_Doc_0329_GetInvolved_ST.webm"/>
-          <br />
+          <br clear="all"/>
           <label for="transtion-in">Transition IN:</label>
           <select type="text" name="transition-in" id="dialog-add-transition-in" class="text ui-widget-content ui-corner-all" />
-            <option id="transition-in-slide" value="none">None</option>
-            <option id="transition-in-slide" value="slide">Slide</option>
+            <option id="transition-in-slide" value="defaultIn">None</option>
+            <option id="transition-in-slide" value="slideIn">Slide</option>
+            <option id="transition-in-slide" value="fadeIn">Fade</option>
           </select>
-          <br />
+          <br clear="all"/>
           <label for="transtion-out">Transition OUT:</label>
           <select type="text" name="transition-out" id="dialog-add-transition-out" class="text ui-widget-content ui-corner-all" />
-            <option id="transition-out-slide" value="none">None</option>
-            <option id="transition-out-slide" value="slide">Slide</option>
+            <option id="transition-out-slide" value="defaultOut">None</option>
+            <option id="transition-out-slide" value="slideOut">Slide</option>
+            <option id="transition-out-slide" value="fadeOut">Fade</option>
           </select>
-          <br />
+          <br clear="all"/>
           <label for="popcorn">Popcorn:</label>
-          <textarea type="text" name="popcorn" id="dialog-add-popcorn" value="" class="text ui-widget-content ui-corner-all">
-            var $p = Popcorn("#video").flickr({start:0, end:10, tags: 'firefox', target:'flickr-container'});
-            $p.test({"id":"start","start":0,"end":2,"target":"test-container"});
-          </textarea>
+          <textarea type="text" name="popcorn" id="dialog-add-popcorn" value="" class="text ui-widget-content ui-corner-all">var $p = Popcorn("#video").flickr({start:0, end:10, tags: 'firefox', target:'flickr-container'});$p.test({"id":"start","start":0,"end":2,"target":"test-container"});</textarea>
         </fieldset>
       </form> 
+    </div>
+    <div id="spinner-div" title="Preparing Content...">
+      <canvas id="spinner-canvas" width="100" height="100" />
     </div>
   </body>
 </html>
