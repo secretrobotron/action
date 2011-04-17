@@ -161,6 +161,7 @@ $(document).ready( function (e) {
       $('#modes-edit').hide();
       $('.container').draggable();
       $('.container').resizable();
+      $('.container').attr('data-editable', true);
     }
     else {
       $('#edit-menu').parent().hide();
@@ -168,6 +169,7 @@ $(document).ready( function (e) {
       $('#modes-edit').show();
       $('.container').draggable('destroy');
       $('.container').resizable('destroy');
+      $('.container').attr('data-editable', false);
     } //if
   }; //toggleEditMode
 
@@ -259,6 +261,7 @@ $(document).ready( function (e) {
       var rx = -50 + Math.random() * 100;
       var ry = -50 + Math.random() * 100;
       $div.attr('id', newTarget + '-ui')
+        .attr('data-editable', true)
         .addClass('ui-widget-content')
         .addClass('container')
         .draggable()
@@ -276,6 +279,9 @@ $(document).ready( function (e) {
       $div.contextMenu('plugin-context-menu', {
         menuStyle: {
           width: '150px',
+        },
+        onContextMenu: function (e) {
+          return $(e.target).attr('data-editable') === 'true';
         },
         onShowMenu: function (e, menu) {
           return menu;
