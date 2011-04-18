@@ -1,0 +1,32 @@
+<html>
+  <head>
+    <title>Action</title>
+    <link rel="stylesheet" href="css/jquery-ui.css" text="text/css" />
+    <link rel="stylesheet" href="css/action.css" text="text/css" />
+    <script type="text/javascript" src="js/jquery.js">{}</script>
+    <script type="text/javascript" src="js/jquery-ui.js">{}</script>
+    <script type="text/javascript" src="js/jquery.transform.js">{}</script>
+    <script type="text/javascript" src="js/jquery.contextmenu.r2.js">{}</script>
+    <script type="text/javascript" src="js/popcorn-complete.js">{}</script>
+    <script type="text/javascript" src="js/action.js">{}</script>
+    <script type="text/javascript" src="js/action.transitions.js">{}</script>
+    <script type="text/javascript">
+      $(document).ready(function(e) {
+        Action.initPlayer();
+        Action.loadProject(/*JSON*/, true);
+        Action.toggleEditMode(false);
+        Action.play();
+      });
+    </script>
+  </head>
+  <body>
+    <div id="videos">
+    </div>
+    <div id="containers">
+    </div>
+    <div id="controls">
+      <a id="controls-last">&lt; Last </a>
+      <a id="controls-next"> Next &gt;</a>
+    </div>
+  </body>
+</html>

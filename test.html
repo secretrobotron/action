@@ -1,0 +1,32 @@
+<html>
+  <head>
+    <title>Action</title>
+    <link rel="stylesheet" href="css/jquery-ui.css" text="text/css"/>
+    <link rel="stylesheet" href="css/action.css" text="text/css"/>
+    <script type="text/javascript" src="js/jquery.js">{}</script>
+    <script type="text/javascript" src="js/jquery-ui.js">{}</script>
+    <script type="text/javascript" src="js/jquery.transform.js">{}</script>
+    <script type="text/javascript" src="js/jquery.contextmenu.r2.js">{}</script>
+    <script type="text/javascript" src="js/popcorn-complete.js">{}</script>
+    <script type="text/javascript" src="js/action.js">{}</script>
+    <script type="text/javascript" src="js/action.transitions.js">{}</script>
+    <script type="text/javascript">
+      $(document).ready(function(e) {
+        Action.initPlayer();
+        Action.loadProject({"type":"Action v0.1 Store","sections":[{"video":"file:///home/secretrobotron/Downloads/Moz_Doc_0329_GetInvolved_ST.webm","transitionIn":"defaultIn","transitionOut":"defaultOut","popcornSrc":"var $p = Popcorn(\"#video\").flickr({start:0, end:10, tags: 'firefox', target:'popcorn-target-flickr-0'});","name":"Untitled 0","dims":{"flickr":{"top":98,"left":871,"width":389,"height":217}}}]}, true);
+        Action.toggleEditMode(false);
+        Action.play();
+      });
+    </script>
+  </head>
+  <body>
+    <div id="videos">
+    </div>
+    <div id="containers">
+    </div>
+    <div id="controls">
+      <a id="controls-last">&lt; Last </a>
+      <a id="controls-next"> Next &gt;</a>
+    </div>
+  </body>
+</html>

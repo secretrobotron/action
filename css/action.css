@@ -1,0 +1,163 @@
+html {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font: 12pt Helvetica, Verdana;
+  overflow: hidden;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+#edit-menu {
+  overflow: hidden;
+  z-index: 1000;
+}
+
+#edit-menu:hover {
+  cursor: pointer;
+}
+
+#edit-menu a:hover {
+  text-decoration: underline;
+}
+
+#edit-menu ul {
+  margin: 0px 0px 10px 10px;
+  padding: 0px 0px 0px 10px;
+  font-size: 80%;
+}
+
+#edit-menu h3 {
+  font-size: 80%;
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+#dialog-add fieldset {
+  padding: 1em;
+}
+
+#dialog-add label {
+  float: left;
+  width: 30%;
+  margin-right:0.5em;
+  padding-top:0.2em;
+  text-align:right;
+}
+
+#dialog-add input, select {
+  width: 60%;
+  font-weight: normal;
+}
+
+#dialog-add textarea {
+  height: 200px;
+  width: 60%;
+  font-size: 10pt;
+  font-weight: normal;
+}
+
+#dialog-add .ui-widget-content {
+  background: #fff;
+}
+
+#containers {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+}
+
+.container {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  border-radius: 10px;
+  box-shadow: 2px 2px 5px #000;
+  width: 300px;
+  height: 300px;
+}
+
+#videos {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+}
+
+#dialog-add form, fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#spinner-div {
+  overflow: hidden;
+  width: 300px;
+  text-align: center;
+}
+
+#spinner-canvas {
+  margin: auto;
+}
+
+#dialog-export textarea {
+  font-size: 12pt;
+  width: 500px;
+  height: 300px;
+}
+
+#dialog-import textarea {
+  font-size: 12pt;
+  width: 500px;
+  height: 300px;
+}
+
+#dialog-load a:hover {
+  cursor: pointer;
+}
+
+#controls {
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 50pt;
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  white-space: nowrap;
+}
+
+#controls a:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#modes {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+}
+
+#modes a:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+

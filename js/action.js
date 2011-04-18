@@ -1,5 +1,16 @@
-var Action = {
-  transitions: {
+var Action = new (function () {
+
+  var sections = [],
+      currentSection,
+      currentSectionIndex,
+      targetUUID = 0,
+      $win = $(window),
+      savedItems = JSON.parse(localStorage.getItem('Action')),
+      edit = window.location.href.indexOf('?edit');
+
+  savedItems = savedItems || [];
+
+  var transitions = this.transitions = {
     defaultIn: {
       name: 'None',
       type: 'in',
@@ -31,155 +42,27 @@ var Action = {
         };
       },
     },
-  },
- 
-  addTransition: function (obj) {
-    console.log(Action);
-    Action.transitions[obj.name] = obj;
-  },
-};
+  };
 
-$(document).ready( function (e) {
+  this.addTransition = function (obj) {
+    transitions[obj.name] = obj;
+  };
 
-  var sections = [],
-      currentSection,
-      currentSectionIndex,
-      targetUUID = 0,
-      $win = $(window),
-      savedItems = JSON.parse(localStorage.getItem('Action')),
-      edit = window.location.href.indexOf('?edit');
-
-  savedItems = savedItems || [];
-
-  for (var i in Action.transitions) {
-    var t = Action.transitions[i];
-    var $option = $('<option value="'+ i  +'">'+ t.name  +'</option>');
-    var $parent = (t.type === 'in') ? $('#dialog-add-transition-in') : $('#dialog-add-transition-out');
-    $parent.append($option);
-    if (t.default) {
-      $option.attr('selected', 'true');
-    } //if
-  } //for
-
-  (function() {
-    var spinnerCanvas = document.getElementById('spinner-canvas'),
-        ctx = spinnerCanvas.getContext('2d'),
-        numPieces = 8,
-        indexStep = 4,
-        spinnerInterval,
-        w = spinnerCanvas.width/2;
-        spinnerIndex = 0;
-
-    ctx.clearRect(0, 0, spinnerCanvas.width, spinnerCanvas.height);
-    ctx.translate(spinnerCanvas.width/2, spinnerCanvas.height/2);
-    ctx.fillStyle = '#aaa';
-    for (var i=0; i<numPieces; ++i) {
-      ctx.save();
-      ctx.rotate(Math.PI*2/numPieces*i);
-      ctx.translate(w/4, w/4);
-      ctx.beginPath();
-      ctx.arc(0, 0, w/8, w/8, 0, Math.PI*2, true);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+  this.loadProject = function(project) {
+    $('#videos').empty();
+    $('#containers').empty();
+    $('#edit-menu-videos').empty();
+    sections = [];
+    for (var i=0; i<project.sections.length; ++i) {
+      var section = project.sections[i];
+      buildVideo( section.video,
+                  section.popcornSrc,
+                  section.transitionIn,
+                  section.transitionOut,
+                  section.name,
+                  section.dims);
     } //for
-
-    $('#spinner-div').dialog({
-      width: 300,
-      autoOpen: false,
-      closeOnEscape: false,
-      draggable: false,
-      resizable: false,
-      modal: true,
-      stack: true,
-      open: function (e, ui) {
-        $('.ui-dialog-titlebar-close').hide();
-        spinnerInterval = setInterval( function() {
-          spinnerIndex += indexStep;
-          $('#spinner-canvas').css('rotate', spinnerIndex+'deg');
-        }, 30);
-      },
-      close: function (e) {
-        clearInterval(spinnerInterval);
-      },
-    });
-  })();
-
-  $('#edit-menu-videos').sortable({
-    placeholder: "ui-state-highlight"
-  });
-
-  $('#edit-menu').disableSelection();
-  $('#edit-menu-videos').disableSelection();
-
-  $('#edit-menu-videos').bind('sortupdate', function ( event, ui ) {
-    newSections = [];
-    var vids = $(this).sortable('toArray');
-    for (var i=0; i<vids.length; ++i) {
-      var vidId = vids[i].substr(vids[i].indexOf('-')+1);
-      for (var j=0; j<sections.length; ++j) {
-        if (vidId === sections[j].video.id) {
-          newSections.push(sections[j]);
-          break;
-        } //if 
-      } //for
-    } //for
-    sections = newSections;
-  });
-
-  Popcorn.plugin('test', function (options) {
-    return {
-      _setup: function (options) {
-      },
-      start: function (event, options) {
-        $('#'+options.target).html('Test!');
-      },
-      end: function (event, options) {
-        $('#'+options.target).html('');
-      }
-    };
-  });
-
-  Popcorn.plugin('animator', function (options) {
-    return {
-      _setup: function (options) {
-      },
-      start: function (event, options) {
-      },
-      end: function (event, options) {
-      }
-    };
-  });
-
-  $('#edit-menu-link-add').click( function(e) {
-    if (currentSection) {
-      currentSection.video.pause();
-    }
-    $('#dialog-add-video-name').val('Untitled '+sections.length);
-    $('#dialog-add').dialog('option', 'buttons', {
-
-      "Insert" : function () {
-        if ( checkVideoDialogFields ) {
-          if (buildVideo( $('#dialog-add-video-url').val(), 
-                          $('#dialog-add-popcorn').val(), 
-                          $('#dialog-add-transition-in').val(), 
-                          $('#dialog-add-transition-out').val(), 
-                          $('#dialog-add-video-name').val()) === false) {
-            $('#dialog-add-popcorn').addClass('ui-state-error');
-            $('#dialog-add-error').addClass('ui-state-highlight');
-          }
-          else {
-            $(this).dialog('close');
-          } //if
-        } //if
-      },
-
-      Cancel : function () {
-        $(this).dialog('close');
-      },
-
-    }).dialog('option', 'title', 'Add Video').dialog('open');
-  });
+  };
 
   function playLastSection() {
     stopCurrentSection();
@@ -230,7 +113,7 @@ $(document).ready( function (e) {
     } //if
   }; //playSection
 
-  function toggleEditMode(toggle) {
+  var toggleEditMode = this.toggleEditMode = function (toggle) {
     if (toggle) {
       $('#edit-menu').parent().show();
       $('#modes-view').show();
@@ -249,7 +132,20 @@ $(document).ready( function (e) {
     } //if
   }; //toggleEditMode
 
-  function producePopcorn(popcornSrc) {
+  function makeStorage() {
+    var store = {
+      type: 'Action v0.1 Store',
+      sections: [],
+    };
+
+    for (var i=0; i<sections.length; ++i) {
+      store.sections.push(sections[i].getReplica());
+    } //for
+
+    return store;
+  }; //makeStorage
+
+  function producePopcorn(popcornSrc, dims) {
     var popcornDivs = [],
         plugins = [],
         pluginInstances = popcornSrc.match(/\.\w*\(\{([\s\w'"]*:\s?[\s"'\w]*,\s?)*["|']?target["|']?:["|'][\w\-]*["|']/gi),
@@ -281,7 +177,7 @@ $(document).ready( function (e) {
         .css('z-index', 30)
         .resizable()
         .css('position', 'absolute')
-        .offset({left:window.innerWidth - $div.width() - 20 + rx, top: 100 + ry});
+        .css({left:window.innerWidth - $div.width() - 100 + rx, top: 100 + ry});
       $div.append(title);
       var content = $('<div/>');
       content.attr('id', newTarget);
@@ -311,6 +207,14 @@ $(document).ready( function (e) {
         },
       });
       ++targetUUID;
+
+      console.log(dims);
+      if (dims && dims[pluginName]) {
+        var dim = dims[pluginName];
+        $div.width(dim.width);
+        $div.height(dim.height);
+        $div.css({left: dim.left, top: dim.top});
+      } //if
     } //for
 
     var popcornFunc = new Function(popcornSrc);
@@ -382,16 +286,6 @@ $(document).ready( function (e) {
         } //for
       };
 
-      currentSection.getReplica = function () {
-        return {
-          video: video.currentSrc,
-          transitionIn: transitionIn,
-          transitionOut: transitionOut,
-          popcornSrc: popcornSrc,
-          name: videoName,
-        }
-      };
-
       $(video).bind('loadedmetadata', function (ev) {
         currentSection.ready = true;
       });
@@ -426,12 +320,12 @@ $(document).ready( function (e) {
 
   }; //editVideo
 
-  function buildVideo(videoUrl, popcornSrc, transitionIn, transitionOut, videoName) {
+  function buildVideo(videoUrl, popcornSrc, transitionIn, transitionOut, videoName, dims) {
     var video = document.createElement('video'),
         $video,
         videoSource = document.createElement('source');
 
-    var popcornProduction = producePopcorn(popcornSrc);
+    var popcornProduction = producePopcorn(popcornSrc, dims);
     var popcornDivs = popcornProduction.popcornDivs;
     var popcornFunc = popcornProduction.popcornFunc;
     popcornSrc = popcornProduction.popcornSrc;
@@ -461,7 +355,7 @@ $(document).ready( function (e) {
 
       $a.appendTo($li);
 
-     $('#edit-menu-videos').append($li);
+      $('#edit-menu-videos').append($li);
 
       if (currentSection) {
         stopCurrentSection();
@@ -494,12 +388,22 @@ $(document).ready( function (e) {
           } //for
         },
         getReplica: function () {
+          var divPositions = {};
+          for (var i=0; i<popcornDivs.length; ++i) {
+            var divName = popcornDivs[i].attr('id').match(/popcorn-target-(\w*)-\d*-ui/)[1];
+            divPositions[divName] = popcornDivs[i].position();
+            $.extend(divPositions[divName], {
+              width: popcornDivs[i].width(),
+              height: popcornDivs[i].height(),
+            });
+          } //for
           return {
             video: video.currentSrc,
             transitionIn: transitionIn,
             transitionOut: transitionOut,
             popcornSrc: popcornSrc,
             name: videoName,
+            dims: divPositions,
           }
         },
       };
@@ -539,247 +443,348 @@ $(document).ready( function (e) {
       } //for
 
       $(video).remove();
+
       return false;
 
     } //catch
 
   }; //buildVideo
 
-  function checkVideoDialogFields() {
-    var fields = $([]).add($('#dialog-add-video-url')).add($('#dialog-add-popcorn'));
-    var okFields = 0;
-    fields.each( function (i, e) {
-      if ( e.value ) {
-        $(e).removeClass('ui-state-error');
-        ++okFields;
-      }
-      else {
-        $(e).addClass('ui-state-error');
+  this.play = function() {
+    playSection(sections[0]);
+  }; //play
+
+  this.initPlayer = function() {
+    $('#controls-next').hide();
+    $('#controls-last').hide();
+    $('#controls-next').click( function (e) {
+      currentSection.transitionOut(playNextSection);
+    });
+    $('#controls-last').click( function (e) {
+      currentSection.transitionOut(playLastSection);
+    });
+  }; //initPlayer
+
+  this.initEditor = function () {
+    for (var i in transitions) {
+      var t = transitions[i];
+      var $option = $('<option value="'+ i  +'">'+ t.name  +'</option>');
+      var $parent = (t.type === 'in') ? $('#dialog-add-transition-in') : $('#dialog-add-transition-out');
+      $parent.append($option);
+      if (t.default) {
+        $option.attr('selected', 'true');
       } //if
-    }); //each
-    return fields.length === okFields;
-  }; //checkVideoDialogFields
-
-  $('#dialog-add').dialog({
-    autoOpen: false,
-    height: 500,
-    width: 700,
-    modal: true,
-    close : function () {
-      var fields = $([]).add($('#dialog-add-video-url')).add($('#dialog-add-popcorn'));
-      fields.removeClass('ui-state-error');
-      $('#dialog-add-error').removeClass('ui-state-highlight');
-      $('#dialog-add-error').html('');
-    },
-  });
-
-  $('#edit-menu').dialog({
-    position: [0, 0],
-    width: 200,
-    modal: false,
-    stack: false,
-    autoOpen: false,
-    closeOnEscape: false,
-    open: function (e, ui) {
-      $(".ui-dialog-titlebar-close").hide();
-    },
-  });
-
-  if (true || edit > -1) {
-    $('#edit-menu').dialog('open');
-  } //if
-
-  $win.bind("beforeunload", function( event ) {
-    return "Are you sure you want to leave?";
-  });
-
-  $win.keypress( function( event ) {
-    var elem = event.srcElement || event.target;
-    if ( (event.which === 46 || event.which === 8) &&
-         (elem.nodeName !== "INPUT" && elem.nodeName !== "TEXTAREA") ) {
-      event.preventDefault();
-    }
-  });
-
-  function makeStorage() {
-    var store = {
-      type: 'Action v0.1 Store',
-      sections: [],
-    };
-
-    for (var i=0; i<sections.length; ++i) {
-      store.sections.push(sections[i].getReplica());
     } //for
 
-    return store;
-  }; //makeStorage
+    var spinnerCanvas = document.getElementById('spinner-canvas'),
+        ctx = spinnerCanvas.getContext('2d'),
+        numPieces = 8,
+        indexStep = 4,
+        spinnerInterval,
+        w = spinnerCanvas.width/2;
+        spinnerIndex = 0;
 
-  function loadProject(project) {
-    $('#videos').empty();
-    $('#containers').empty();
-    $('#edit-menu-videos').empty();
-    sections = [];
-    for (var i=0; i<project.sections.length; ++i) {
-      var section = project.sections[i];
-      buildVideo( section.video,
-                  section.popcornSrc,
-                  section.transitionIn,
-                  section.transitionOut,
-                  section.name);
+    ctx.clearRect(0, 0, spinnerCanvas.width, spinnerCanvas.height);
+    ctx.translate(spinnerCanvas.width/2, spinnerCanvas.height/2);
+    ctx.fillStyle = '#aaa';
+    for (var i=0; i<numPieces; ++i) {
+      ctx.save();
+      ctx.rotate(Math.PI*2/numPieces*i);
+      ctx.translate(w/4, w/4);
+      ctx.beginPath();
+      ctx.arc(0, 0, w/8, w/8, 0, Math.PI*2, true);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
     } //for
-  }; //loadProject
 
-  $('#dialog-export').dialog({
-    modal: true,
-    autoOpen: false,
-    width: 550,
-    height: 500,
-    buttons: {
-      'Ok': function() {
-        $(this).dialog('close');  
+    $('#spinner-div').dialog({
+      width: 300,
+      autoOpen: false,
+      closeOnEscape: false,
+      draggable: false,
+      resizable: false,
+      modal: true,
+      stack: true,
+      open: function (e, ui) {
+        $('.ui-dialog-titlebar-close').hide();
+        spinnerInterval = setInterval( function() {
+          spinnerIndex += indexStep;
+          $('#spinner-canvas').css('rotate', spinnerIndex+'deg');
+        }, 30);
       },
-    }
-  });
-
-  $('#dialog-import').dialog({
-    modal: true,
-    autoOpen: false,
-    width: 550,
-    height: 500,
-    buttons: {
-      'Ok': function() {
-        $(this).dialog('close');  
-        toggleEditMode(false);
-        loadProject(JSON.parse($('#dialog-import-data').val()));
+      close: function (e) {
+        clearInterval(spinnerInterval);
       },
-      'Cancel': function() {
-        $(this).dialog('close');  
-      },
-    }
-  });
+    });
 
-  $('#dialog-load').dialog({
-    modal: true,
-    autoOpen: false,
-    width: 550,
-    height: 500,
-    buttons: {
-      'Cancel': function() {
-        $(this).dialog('close');  
-      },
-    }
-  });
+    $('#edit-menu-videos').sortable({
+      placeholder: "ui-state-highlight"
+    });
 
-  $('#dialog-save').dialog({
-    modal: true,
-    autoOpen: false,
-    width: 350,
-    height: 300,
-    buttons: {
-      'Ok': function() {
-        $(this).dialog('close');  
-        var store = makeStorage();
-        store.projectName = $('#dialog-save-data').val();
-        savedItems.push(store);
-        localStorage.setItem('Action', JSON.stringify(savedItems));
-      },
-      'Cancel': function() {
-        $(this).dialog('close');
-      },
-    }
-  });
+    $('#edit-menu').disableSelection();
+    $('#edit-menu-videos').disableSelection();
 
-  $('#save-export').click( function (event) {
-    var store = makeStorage();
-    $('#dialog-export-data').html(JSON.stringify(store));
-    $('#dialog-export').dialog('open');
-  });
+    $('#edit-menu-videos').bind('sortupdate', function ( event, ui ) {
+      newSections = [];
+      var vids = $(this).sortable('toArray');
+      for (var i=0; i<vids.length; ++i) {
+        var vidId = vids[i].substr(vids[i].indexOf('-')+1);
+        for (var j=0; j<sections.length; ++j) {
+          if (vidId === sections[j].video.id) {
+            newSections.push(sections[j]);
+            break;
+          } //if 
+        } //for
+      } //for
+      sections = newSections;
+    });
 
-  $('#save-store').click( function (event) {
-    $('#dialog-save').dialog('open');
-  });
+    $('#edit-menu-link-add').click( function(e) {
+      if (currentSection) {
+        currentSection.video.pause();
+      }
+      $('#dialog-add-video-name').val('Untitled '+sections.length);
+      $('#dialog-add').dialog('option', 'buttons', {
 
-  $('#load-store').click( function (event) {
-    $('#dialog-load').empty();
-    $('#dialog-load').append('<h3>Choose a project to load:</h3>');
-    for (var i=0; i<savedItems.length; ++i) {
-      (function() {
-        var savedItem = savedItems[i];
-        var $li = $('<li><a>'+savedItem.projectName+'</a></li>');
-        $li.click( function (e) {
-          $('#dialog-load').dialog('close');
-          loadProject(savedItem);
-        });
-        $('#dialog-load').append($li);
-      })();
-    } //for
-    $('#dialog-load').dialog('open');
-  });
-
-  $('#load-import').click( function (event) {
-    $('#dialog-import').dialog('open');
-  });
-
-  $('#controls-next').hide();
-  $('#controls-last').hide();
-  $('#controls-next').click( function (e) {
-    currentSection.transitionOut(playNextSection);
-  });
-  $('#controls-last').click( function (e) {
-    currentSection.transitionOut(playLastSection);
-  });
-
-  $('#plugin-context-menu').hide();
-
-  $('#edit-menu-publish').hide();
-  $('#edit-menu-publish').click( function (e) {
-  });
-
-  toggleEditMode(true);
-
-  $('#modes-edit').click( function (e) {
-    toggleEditMode(true);
-  });
-
-  $('#modes-view').click( function (e) {
-    toggleEditMode(false);
-    if (currentSection) {
-      playSection(currentSection);
-    } //if
-  });
-
-  $('#edit-menu-link-edit').hide();
-
-  $('#edit-menu-link-edit').click( function (e) {
-    currentSection.video.pause();
-    $('#dialog-add-video-name').val(currentSection.name);
-    $('#dialog-add-video-url').val(currentSection.video.currentSrc);
-    $('#dialog-add-popcorn').val(currentSection.popcornSrc);
-    $('#dialog-add-transition-in').val(currentSection.transitionInName);
-    $('#dialog-add-transition-out').val(currentSection.transitionOutName);
-    $('#dialog-add').dialog('option', 'buttons', {
-
-      "Save" : function () {
-        if ( checkVideoDialogFields ) {
-          if (editVideo(  $('#dialog-add-video-url').val(), 
-                          $('#dialog-add-popcorn').val(), 
-                          $('#dialog-add-transition-in').val(), 
-                          $('#dialog-add-transition-out').val(), 
-                          $('#dialog-add-video-name').val()) === false) {
-            $('#dialog-add-popcorn').addClass('ui-state-error');
-            $('#dialog-add-error').addClass('ui-state-highlight');
-          }
-          else {
-            $(this).dialog('close');
+        "Insert" : function () {
+          if ( checkVideoDialogFields ) {
+            if (buildVideo( $('#dialog-add-video-url').val(), 
+                            $('#dialog-add-popcorn').val(), 
+                            $('#dialog-add-transition-in').val(), 
+                            $('#dialog-add-transition-out').val(), 
+                            $('#dialog-add-video-name').val()) === false) {
+              $('#dialog-add-popcorn').addClass('ui-state-error');
+              $('#dialog-add-error').addClass('ui-state-highlight');
+            }
+            else {
+              $(this).dialog('close');
+            } //if
           } //if
+        },
+
+        Cancel : function () {
+          $(this).dialog('close');
+        },
+
+      }).dialog('option', 'title', 'Add Video').dialog('open');
+    });
+
+    function checkVideoDialogFields() {
+      var fields = $([]).add($('#dialog-add-video-url')).add($('#dialog-add-popcorn'));
+      var okFields = 0;
+      fields.each( function (i, e) {
+        if ( e.value ) {
+          $(e).removeClass('ui-state-error');
+          ++okFields;
+        }
+        else {
+          $(e).addClass('ui-state-error');
         } //if
+      }); //each
+      return fields.length === okFields;
+    }; //checkVideoDialogFields
+
+    $('#dialog-add').dialog({
+      autoOpen: false,
+      height: 500,
+      width: 700,
+      modal: true,
+      close : function () {
+        var fields = $([]).add($('#dialog-add-video-url')).add($('#dialog-add-popcorn'));
+        fields.removeClass('ui-state-error');
+        $('#dialog-add-error').removeClass('ui-state-highlight');
+        $('#dialog-add-error').html('');
       },
+    });
 
-      Cancel : function () {
-        $(this).dialog('close');
+    $('#edit-menu').dialog({
+      position: [0, 0],
+      width: 200,
+      modal: false,
+      stack: false,
+      autoOpen: false,
+      closeOnEscape: false,
+      open: function (e, ui) {
+        $(".ui-dialog-titlebar-close").hide();
       },
+    });
 
-    }).dialog('option', 'title', 'Edit Video').dialog('open');
-  });
+    if (true || edit > -1) {
+      $('#edit-menu').dialog('open');
+    } //if
 
-});
+    $win.bind("beforeunload", function( event ) {
+      return "Are you sure you want to leave?";
+    });
+
+    $win.keypress( function( event ) {
+      var elem = event.srcElement || event.target;
+      if ( (event.which === 46 || event.which === 8) &&
+           (elem.nodeName !== "INPUT" && elem.nodeName !== "TEXTAREA") ) {
+        event.preventDefault();
+      }
+    });
+
+    $('#dialog-export').dialog({
+      modal: true,
+      autoOpen: false,
+      width: 550,
+      height: 500,
+      buttons: {
+        'Ok': function() {
+          $(this).dialog('close');  
+        },
+      }
+    });
+
+    $('#dialog-import').dialog({
+      modal: true,
+      autoOpen: false,
+      width: 550,
+      height: 500,
+      buttons: {
+        'Ok': function() {
+          $(this).dialog('close');  
+          toggleEditMode(false);
+          loadProject(JSON.parse($('#dialog-import-data').val()));
+        },
+        'Cancel': function() {
+          $(this).dialog('close');  
+        },
+      }
+    });
+
+    $('#dialog-load').dialog({
+      modal: true,
+      autoOpen: false,
+      width: 550,
+      height: 500,
+      buttons: {
+        'Cancel': function() {
+          $(this).dialog('close');  
+        },
+      }
+    });
+
+    $('#dialog-save').dialog({
+      modal: true,
+      autoOpen: false,
+      width: 350,
+      height: 300,
+      buttons: {
+        'Ok': function() {
+          $(this).dialog('close');  
+          var store = makeStorage();
+          store.projectName = $('#dialog-save-data').val();
+          savedItems.push(store);
+          localStorage.setItem('Action', JSON.stringify(savedItems));
+        },
+        'Cancel': function() {
+          $(this).dialog('close');
+        },
+      }
+    });
+
+    $('#save-export').click( function (event) {
+      var store = makeStorage();
+      $('#dialog-export-data').html(JSON.stringify(store));
+      $('#dialog-export').dialog('open');
+    });
+
+    $('#save-store').click( function (event) {
+      $('#dialog-save').dialog('open');
+    });
+
+    $('#load-store').click( function (event) {
+      $('#dialog-load').empty();
+      $('#dialog-load').append('<h3>Choose a project to load:</h3>');
+      for (var i=0; i<savedItems.length; ++i) {
+        (function() {
+          var savedItem = savedItems[i];
+          var $li = $('<li><a>'+savedItem.projectName+'</a></li>');
+          $li.click( function (e) {
+            $('#dialog-load').dialog('close');
+            loadProject(savedItem);
+          });
+          $('#dialog-load').append($li);
+        })();
+      } //for
+      $('#dialog-load').dialog('open');
+    });
+
+    $('#load-import').click( function (event) {
+      $('#dialog-import').dialog('open');
+    });
+
+    $('#plugin-context-menu').hide();
+
+    $('#edit-menu-publish').click( function (e) {
+      var store = makeStorage();
+      var jsonStore = JSON.stringify(store);
+      $('#spinner-div').dialog('open');
+      $.ajax({
+        url: 'templates/default.html', 
+        success: function(data) {
+          $('#spinner-div').dialog('close');
+          var xmlString = data.xml || (new XMLSerializer()).serializeToString(data);
+          xmlString = xmlString.replace('/*JSON*/', jsonStore);
+          $('#dialog-export-data').val(xmlString);
+          $('#dialog-export').dialog('open');
+        },
+        dataType: 'xml',
+        type: 'GET',
+      });
+    });
+
+    toggleEditMode(true);
+
+    $('#modes-edit').click( function (e) {
+      toggleEditMode(true);
+    });
+
+    $('#modes-view').click( function (e) {
+      toggleEditMode(false);
+      if (currentSection) {
+        playSection(currentSection);
+      } //if
+    });
+
+    $('#edit-menu-link-edit').hide();
+
+    $('#edit-menu-link-edit').click( function (e) {
+      currentSection.video.pause();
+      $('#dialog-add-video-name').val(currentSection.name);
+      $('#dialog-add-video-url').val(currentSection.video.currentSrc);
+      $('#dialog-add-popcorn').val(currentSection.popcornSrc);
+      $('#dialog-add-transition-in').val(currentSection.transitionInName);
+      $('#dialog-add-transition-out').val(currentSection.transitionOutName);
+      $('#dialog-add').dialog('option', 'buttons', {
+
+        "Save" : function () {
+          if ( checkVideoDialogFields ) {
+            if (editVideo(  $('#dialog-add-video-url').val(), 
+                            $('#dialog-add-popcorn').val(), 
+                            $('#dialog-add-transition-in').val(), 
+                            $('#dialog-add-transition-out').val(), 
+                            $('#dialog-add-video-name').val()) === false) {
+              $('#dialog-add-popcorn').addClass('ui-state-error');
+              $('#dialog-add-error').addClass('ui-state-highlight');
+            }
+            else {
+              $(this).dialog('close');
+            } //if
+          } //if
+        },
+
+        Cancel : function () {
+          $(this).dialog('close');
+        },
+
+      }).dialog('option', 'title', 'Edit Video').dialog('open');
+    });
+
+  };
+
+})();
+
