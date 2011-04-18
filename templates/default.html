@@ -12,6 +12,15 @@
     <script type="text/javascript" src="js/action.transitions.js">{}</script>
     <script type="text/javascript">
       $(document).ready(function(e) {
+        /*
+          Add your own transitions here using Action.addTransition({...});
+          
+          Make sure you change the names of the transitions in the JSON blob 
+          below to the names of the transitions you create.
+
+          e.g. transitionIn: 'yourTransitionInName', transitionOut: 'yourTransitionOutName'
+        */
+
         Action.initPlayer();
         Action.loadProject(/*JSON*/, true);
         Action.toggleEditMode(false);
