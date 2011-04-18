@@ -208,7 +208,6 @@ var Action = new (function () {
       });
       ++targetUUID;
 
-      console.log(dims);
       if (dims && dims[pluginName]) {
         var dim = dims[pluginName];
         $div.width(dim.width);
