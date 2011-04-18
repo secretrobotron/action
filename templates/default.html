@@ -1,15 +1,15 @@
 <html>
   <head>
     <title>Action</title>
-    <link rel="stylesheet" href="css/jquery-ui.css" text="text/css" />
-    <link rel="stylesheet" href="css/action.css" text="text/css" />
-    <script type="text/javascript" src="js/jquery.js">{}</script>
-    <script type="text/javascript" src="js/jquery-ui.js">{}</script>
-    <script type="text/javascript" src="js/jquery.transform.js">{}</script>
-    <script type="text/javascript" src="js/jquery.contextmenu.r2.js">{}</script>
-    <script type="text/javascript" src="js/popcorn-complete.js">{}</script>
-    <script type="text/javascript" src="js/action.js">{}</script>
-    <script type="text/javascript" src="js/action.transitions.js">{}</script>
+    <link rel="stylesheet" href="http://robothaus.org/action/css/jquery-ui.css" text="text/css" />
+    <link rel="stylesheet" href="http://robothaus.org/action/css/action.css" text="text/css" />
+    <script type="text/javascript" src="http://robothaus.org/action/js/jquery.js">{}</script>
+    <script type="text/javascript" src="http://robothaus.org/action/js/jquery-ui.js">{}</script>
+    <script type="text/javascript" src="http://robothaus.org/action/js/jquery.transform.js">{}</script>
+    <script type="text/javascript" src="http://robothaus.org/action/js/jquery.contextmenu.r2.js">{}</script>
+    <script type="text/javascript" src="http://robothaus.org/action/js/popcorn-complete.js">{}</script>
+    <script type="text/javascript" src="http://robothaus.org/action/js/action.js">{}</script>
+    <script type="text/javascript" src="http://robothaus.org/action/js/action.transitions.js">{}</script>
     <script type="text/javascript">
       $(document).ready(function(e) {
         /*
@@ -19,6 +19,30 @@
           below to the names of the transitions you create.
 
           e.g. transitionIn: 'yourTransitionInName', transitionOut: 'yourTransitionOutName'
+
+          For example:
+
+          Action.addTransition({
+            type: 'in',
+            name: 'Test',
+            build: function (video) {
+              var $video = $(video);
+                return function (callback) {
+                $video.show();
+                $video.css({ left:window.innerWidth/2 - video.videoWidth/2, 
+                             top:-video.videoHeight});
+                $video.transform({rotate: '-30deg'});
+                $video.animate({
+                  rotate: '0deg',
+                  top: window.innerHeight/2 - video.videoHeight/2 
+                }, 1000, callback);
+              };
+            },
+          });
+
+          ...
+
+          Action.loadProject({"type":"Action v0.1 Store","sections":[{"video":"http://videos-cdn.mozilla.net/serv/webmademovies/Moz_Doc_0329_GetInvolved_ST.webm","transitionIn":"Test","transitionOut":"defaultOut","popcornSrc":"var $p = Popcorn(\"#video\").flickr({start:0, end:10, tags: 'firefox', target:'popcorn-target-flickr-0'});","name":"Untitled 0","dims":{"flickr":{"top":123.01666259765625,"left":857.63330078125,"width":299.76666,"height":299.76666}}}]}, true);
         */
 
         Action.initPlayer();
