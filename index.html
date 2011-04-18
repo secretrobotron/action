@@ -174,6 +174,7 @@
     <!--<script type="text/javascript" src="http://popcornjs.org/code/dist/popcorn-complete.js"></script>-->
     <script type="text/javascript" src="js/popcorn-complete.js"></script>
     <script type="text/javascript" src="js/action.js"></script>
+    <script type="text/javascript" src="js/action.transitions.js"></script>
   </head>
   <body>
     <div id="videos">
@@ -181,10 +182,10 @@
     <div id="containers">
     </div>
     <div id="edit-menu" title="Menu">
-      <h3>Options</h3>
-      <ul id="edit-menu-list">
-        <li><a id="edit-menu-link-add">Add Video</a></li>
-      </ul>
+      <h3><a id="edit-menu-link-add">Add Video</a></h3>
+      <br />
+      <h3><a id="edit-menu-link-edit">Edit Video</a></h3>
+      <br />
       <h3>Videos</h3>
       <ul id="edit-menu-videos">
       </ul>
@@ -208,21 +209,15 @@
           <input type="text" name="video-name" id="dialog-add-video-name" class="text ui-widget-content ui-corner-all" value="Untitled" />
           <br clear="all"/>
           <label for="video-url">Video URL:</label>
-          <input type="text" name="video-url" id="dialog-add-video-url" class="text ui-widget-content ui-corner-all" value="http://videos-cdn.mozilla.net/serv/webmademovies/Moz_Doc_0329_GetInvolved_ST.webm"/>
-          <!--<input type="text" name="video-url" id="dialog-add-video-url" class="text ui-widget-content ui-corner-all" value="file:///home/secretrobotron/Downloads/Moz_Doc_0329_GetInvolved_ST.webm"/>-->
+          <!--<input type="text" name="video-url" id="dialog-add-video-url" class="text ui-widget-content ui-corner-all" value="http://videos-cdn.mozilla.net/serv/webmademovies/Moz_Doc_0329_GetInvolved_ST.webm"/>-->
+          <input type="text" name="video-url" id="dialog-add-video-url" class="text ui-widget-content ui-corner-all" value="file:///home/secretrobotron/Downloads/Moz_Doc_0329_GetInvolved_ST.webm"/>
           <br clear="all"/>
           <label for="transtion-in">Transition IN:</label>
           <select type="text" name="transition-in" id="dialog-add-transition-in" class="text ui-widget-content ui-corner-all" />
-            <option id="transition-in-slide" value="defaultIn">None</option>
-            <option id="transition-in-slide" value="slideIn">Slide</option>
-            <option id="transition-in-slide" value="fadeIn">Fade</option>
           </select>
           <br clear="all"/>
           <label for="transtion-out">Transition OUT:</label>
           <select type="text" name="transition-out" id="dialog-add-transition-out" class="text ui-widget-content ui-corner-all" />
-            <option id="transition-out-slide" value="defaultOut">None</option>
-            <option id="transition-out-slide" value="slideOut">Slide</option>
-            <option id="transition-out-slide" value="fadeOut">Fade</option>
           </select>
           <br clear="all"/>
           <label for="popcorn">Popcorn:</label>

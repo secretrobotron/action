@@ -1,3 +1,44 @@
+var Action = {
+  transitions: {
+    defaultIn: {
+      name: 'None',
+      type: 'in',
+      default: true,
+      build: function (video) {
+        var $video = $(video);
+        return function (callback) {
+          $video.show();
+          $video.css({ left:window.innerWidth/2 - video.videoWidth/2, 
+                       top:window.innerHeight/2 - video.videoHeight/2});
+          if (callback) { 
+            callback();
+          } //if
+        };
+      },
+    },
+
+    defaultOut: {
+      name: 'None',
+      type: 'out',
+      default: true,
+      build: function (video) {
+        return function (callback) {
+          var $video = $(video);
+          $video.hide();
+          if (callback) { 
+            callback();
+          } //if
+        };
+      },
+    },
+  },
+ 
+  addTransition: function (obj) {
+    console.log(Action);
+    Action.transitions[obj.name] = obj;
+  },
+};
+
 $(document).ready( function (e) {
 
   var sections = [],
@@ -9,6 +50,16 @@ $(document).ready( function (e) {
       edit = window.location.href.indexOf('?edit');
 
   savedItems = savedItems || [];
+
+  for (var i in Action.transitions) {
+    var t = Action.transitions[i];
+    var $option = $('<option value="'+ i  +'">'+ t.name  +'</option>');
+    var $parent = (t.type === 'in') ? $('#dialog-add-transition-in') : $('#dialog-add-transition-out');
+    $parent.append($option);
+    if (t.default) {
+      $option.attr('selected', 'true');
+    } //if
+  } //for
 
   (function() {
     var spinnerCanvas = document.getElementById('spinner-canvas'),
@@ -101,8 +152,33 @@ $(document).ready( function (e) {
   });
 
   $('#edit-menu-link-add').click( function(e) {
+    if (currentSection) {
+      currentSection.video.pause();
+    }
     $('#dialog-add-video-name').val('Untitled '+sections.length);
-    $('#dialog-add').dialog('open');
+    $('#dialog-add').dialog('option', 'buttons', {
+
+      "Insert" : function () {
+        if ( checkVideoDialogFields ) {
+          if (buildVideo( $('#dialog-add-video-url').val(), 
+                          $('#dialog-add-popcorn').val(), 
+                          $('#dialog-add-transition-in').val(), 
+                          $('#dialog-add-transition-out').val(), 
+                          $('#dialog-add-video-name').val()) === false) {
+            $('#dialog-add-popcorn').addClass('ui-state-error');
+            $('#dialog-add-error').addClass('ui-state-highlight');
+          }
+          else {
+            $(this).dialog('close');
+          } //if
+        } //if
+      },
+
+      Cancel : function () {
+        $(this).dialog('close');
+      },
+
+    }).dialog('option', 'title', 'Add Video').dialog('open');
   });
 
   function playLastSection() {
@@ -173,76 +249,13 @@ $(document).ready( function (e) {
     } //if
   }; //toggleEditMode
 
-  function buildVideo(videoUrl, popcornSrc, transitionIn, transitionOut, videoName) {
-    var video = document.createElement('video'),
-        $video,
-        videoSource = document.createElement('source');
+  function producePopcorn(popcornSrc) {
+    var popcornDivs = [],
+        plugins = [],
+        pluginInstances = popcornSrc.match(/\.\w*\(\{([\s\w'"]*:\s?[\s"'\w]*,\s?)*["|']?target["|']?:["|'][\w\-]*["|']/gi),
+        targetRegex = /[\s"']*target[\s"']*:\s?["|'](.*)["|']\s?/,
+        pluginRegex = /\.(\w*)\(\{/;
 
-    function setVideoPosition(options) {
-      $video.css(options);
-    }; //setVideoPosition
-
-    var transitions = {
-      slideIn: function (callback) {
-        $video.show();
-        setVideoPosition({ left:window.innerWidth/2 - video.videoWidth/2, 
-                          top:-video.videoHeight});
-        $video.transform({rotate: '-30deg'});
-        $video.animate({
-          rotate: '0deg',
-          top: window.innerHeight/2 - video.videoHeight/2 
-        }, 1000, callback);
-
-      },
-      slideOut: function (callback) {
-        $video.animate({
-          rotate: '30deg',
-          top: window.innerHeight + video.videoHeight 
-        }, 1000, function() {
-          $video.hide();
-          if (callback) {
-            callback();
-          } //if
-        });
-      },
-      fadeIn: function (callback) {
-        setVideoPosition({ left:window.innerWidth/2 - video.videoWidth/2, 
-                          top:window.innerHeight/2 - video.videoHeight/2});
-        $video.css('opacity', 0);
-        $video.show();
-        $video.fadeTo(1000, 1);
-       
-      },
-      fadeOut: function (callback) {
-        $video.fadeTo(1000, 0);
-        setTimeout(function() {
-          $video.hide();
-          if (callback) {
-            callback();
-          } //if
-        }, 1000);
-      },
-      defaultIn: function (callback) {
-        $video.show();
-        setVideoPosition({ left:window.innerWidth/2 - video.videoWidth/2, 
-                          top:window.innerHeight/2 - video.videoHeight/2});
-        if (callback) { 
-          callback();
-        } //if
-      },
-      defaultOut: function (callback) {
-        $video.hide();
-        if (callback) { 
-          callback();
-        } //if
-      },
-    };
-
-    var plugins = [];
-    var popcornDivs = [];
-    var pluginInstances = popcornSrc.match(/\.\w*\(\{([\s\w'"]*:\s?[\s"'\w]*,\s?)*["|']?target["|']?:["|'][\w\-]*["|']/gi);
-    var targetRegex = /[\s"']*target[\s"']*:\s?["|'](.*)["|']\s?/;
-    var pluginRegex = /\.(\w*)\(\{/;
     for (var i=0; i<pluginInstances.length; ++i) {
       var instance = pluginInstances[i];
       var targetName = instance.match(targetRegex)[1];
@@ -302,6 +315,127 @@ $(document).ready( function (e) {
 
     var popcornFunc = new Function(popcornSrc);
 
+    return {popcornSrc: popcornSrc, popcornDivs: popcornDivs, popcornFunc: popcornFunc};
+  }; //producePopcorn
+
+  function editVideo(videoUrl, popcornSrc, transitionIn, transitionOut, videoName) {
+    var video = document.createElement('video'),
+        $video,
+        videoSource = document.createElement('source');
+
+    var popcornProduction = producePopcorn(popcornSrc);
+    var popcornDivs = popcornProduction.popcornDivs;
+    var popcornFunc = popcornProduction.popcornFunc;
+    popcornSrc = popcornProduction.popcornSrc;
+
+    videoSource.src = videoUrl;
+    video.appendChild(videoSource); 
+    video.id = 'video';
+    video.setAttribute('controls', true);
+    video.setAttribute('autobuffer', true);
+    video.setAttribute('preload', 'auto');
+    video.style.zIndex = 20;
+
+    $('#videos').append(video);
+    $video = $(video);
+
+    try {
+
+      //Should bail right here if popcorn is bad
+      popcornFunc();
+
+      video.id = 'video' + sections.length;
+
+      var popcorn = Popcorn.instances[Popcorn.instances.length-1];
+
+      if (currentSection) {
+        stopCurrentSection();
+      } //if
+
+      $(currentSection.video).remove();
+      currentSection.video = video;
+
+      currentSection.video = video;
+      currentSection.transitionIn = Action.transitions[transitionIn].build(video);
+      currentSection.transitionOut = Action.transitions[transitionOut].build(video);
+      currentSection.transitionInName = transitionIn;
+      currentSection.transitionOutName = transitionOut;
+      currentSection.popcorn = popcorn;
+      currentSection.popcornSrc = popcornSrc;
+      currentSection.name = videoName;
+      currentSection.popcornDivs = popcornDivs;
+      currentSection.ready = false;
+
+      currentSection.$li.css('id', 'list-'+video.id);
+      currentSection.$li.children('a').css('id', 'a-'+video.id).html(videoName);
+
+      currentSection.show = function () {
+        for (var i=0; i<popcornDivs.length; ++i) {
+          $(popcornDivs[i]).show();
+        } //for
+      };
+
+      currentSection.hide = function () {
+        $video.hide();
+        for (var i=0; i<popcornDivs.length; ++i) {
+          $(popcornDivs[i]).hide();
+        } //for
+      };
+
+      currentSection.getReplica = function () {
+        return {
+          video: video.currentSrc,
+          transitionIn: transitionIn,
+          transitionOut: transitionOut,
+          popcornSrc: popcornSrc,
+          name: videoName,
+        }
+      };
+
+      $(video).bind('loadedmetadata', function (ev) {
+        currentSection.ready = true;
+      });
+
+      popcorn.listen('ended', function (ev) {
+        if (sections.indexOf(currentSection) < sections.length -1) {
+          $('#controls-next').fadeTo(150, 1);
+        }
+        if (sections.indexOf(currentSection) > 0) {
+          $('#controls-last').fadeTo(150, 1);
+        }
+      });
+
+      $video.css('position', 'absolute');
+      currentSection.hide();
+      playSection(currentSection);
+      $('#edit-menu-link-edit').show();
+      return true;
+    }
+    catch (error) {
+      $('#dialog-add-error').html(error.toString());
+
+      for (var i=0; i<popcornDivs.length; ++i) {
+        $(popcornDivs[i]).remove();
+      } //for
+
+      $(video).remove();
+      return false;
+
+    } //catch
+
+
+  }; //editVideo
+
+  function buildVideo(videoUrl, popcornSrc, transitionIn, transitionOut, videoName) {
+    var video = document.createElement('video'),
+        $video,
+        videoSource = document.createElement('source');
+
+    var popcornProduction = producePopcorn(popcornSrc);
+    var popcornDivs = popcornProduction.popcornDivs;
+    var popcornFunc = popcornProduction.popcornFunc;
+    popcornSrc = popcornProduction.popcornSrc;
+
     videoSource.src = videoUrl;
     video.appendChild(videoSource); 
     video.id = 'video';
@@ -338,8 +472,10 @@ $(document).ready( function (e) {
 
       var section = {
         video: video,
-        transitionIn: transitions[transitionIn],
-        transitionOut: transitions[transitionOut],
+        transitionIn: Action.transitions[transitionIn].build(video),
+        transitionOut: Action.transitions[transitionOut].build(video),
+        transitionInName: transitionIn,
+        transitionOutName: transitionOut,
         popcorn: popcorn,
         popcornSrc: popcornSrc,
         name: videoName,
@@ -392,9 +528,11 @@ $(document).ready( function (e) {
       $video.css('position', 'absolute');
       section.hide();
       playSection(section);
+      $('#edit-menu-link-edit').show();
       return true;
     }
     catch (error) {
+      $('#dialog-add-error').html(error.toString());
 
       for (var i=0; i<popcornDivs.length; ++i) {
         $(popcornDivs[i]).remove();
@@ -407,66 +545,33 @@ $(document).ready( function (e) {
 
   }; //buildVideo
 
-  (function() {
+  function checkVideoDialogFields() {
     var fields = $([]).add($('#dialog-add-video-url')).add($('#dialog-add-popcorn'));
-    $('#dialog-add').dialog({
+    var okFields = 0;
+    fields.each( function (i, e) {
+      if ( e.value ) {
+        $(e).removeClass('ui-state-error');
+        ++okFields;
+      }
+      else {
+        $(e).addClass('ui-state-error');
+      } //if
+    }); //each
+    return fields.length === okFields;
+  }; //checkVideoDialogFields
 
-      autoOpen: false,
-      height: 500,
-      width: 700,
-      modal: true,
-
-      buttons: {
-
-        "Insert" : function () {
-
-          var okFields = 0;
-          fields.each( function (i, e) {
-
-            if ( e.value ) {
-              $(e).removeClass('ui-state-error');
-              ++okFields;
-            }
-            else {
-              $(e).addClass('ui-state-error');
-            } //if
-          
-          }); //each
-
-          if ( okFields === fields.length ) {
-
-            if (buildVideo( $('#dialog-add-video-url').val(), 
-                            $('#dialog-add-popcorn').val(), 
-                            $('#dialog-add-transition-in').val(), 
-                            $('#dialog-add-transition-out').val(), 
-                            $('#dialog-add-video-name').val()) === false) {
-              $('#dialog-add-popcorn').addClass('ui-state-error');
-              $('#dialog-add-error').html(error.toString());
-              $('#dialog-add-error').addClass('ui-state-highlight');
-            }
-            else {
-              $(this).dialog('close');
-            } //if
-
-          } //if
-
-        },
-
-        Cancel : function () {
-          $(this).dialog('close');
-        },
-
-      },
-
-      close : function () {
-        //fields.val('');
-        fields.removeClass('ui-state-error');
-        $('#dialog-add-error').removeClass('ui-state-highlight');
-        $('#dialog-add-error').html('');
-      },
-
-    });
-  })();
+  $('#dialog-add').dialog({
+    autoOpen: false,
+    height: 500,
+    width: 700,
+    modal: true,
+    close : function () {
+      var fields = $([]).add($('#dialog-add-video-url')).add($('#dialog-add-popcorn'));
+      fields.removeClass('ui-state-error');
+      $('#dialog-add-error').removeClass('ui-state-highlight');
+      $('#dialog-add-error').html('');
+    },
+  });
 
   $('#edit-menu').dialog({
     position: [0, 0],
@@ -641,6 +746,40 @@ $(document).ready( function (e) {
     if (currentSection) {
       playSection(currentSection);
     } //if
+  });
+
+  $('#edit-menu-link-edit').hide();
+
+  $('#edit-menu-link-edit').click( function (e) {
+    currentSection.video.pause();
+    $('#dialog-add-video-name').val(currentSection.name);
+    $('#dialog-add-video-url').val(currentSection.video.currentSrc);
+    $('#dialog-add-popcorn').val(currentSection.popcornSrc);
+    $('#dialog-add-transition-in').val(currentSection.transitionInName);
+    $('#dialog-add-transition-out').val(currentSection.transitionOutName);
+    $('#dialog-add').dialog('option', 'buttons', {
+
+      "Save" : function () {
+        if ( checkVideoDialogFields ) {
+          if (editVideo(  $('#dialog-add-video-url').val(), 
+                          $('#dialog-add-popcorn').val(), 
+                          $('#dialog-add-transition-in').val(), 
+                          $('#dialog-add-transition-out').val(), 
+                          $('#dialog-add-video-name').val()) === false) {
+            $('#dialog-add-popcorn').addClass('ui-state-error');
+            $('#dialog-add-error').addClass('ui-state-highlight');
+          }
+          else {
+            $(this).dialog('close');
+          } //if
+        } //if
+      },
+
+      Cancel : function () {
+        $(this).dialog('close');
+      },
+
+    }).dialog('option', 'title', 'Edit Video').dialog('open');
   });
 
 });

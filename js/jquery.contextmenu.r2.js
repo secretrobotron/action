@@ -80,10 +80,11 @@
 
     var index = hash.length - 1;
     $(this).bind('contextmenu', function(e) {
+      if (e.ctrlKey) return true;
       // Check if onContextMenu() defined
       var bShowContext = (!!hash[index].onContextMenu) ? hash[index].onContextMenu(e) : true;
-      if (bShowContext) display(index, this, e, options);
-      return false;
+      if (bShowContext === true) display(index, this, e, options);
+      return !bShowContext;
     });
     return this;
   };
